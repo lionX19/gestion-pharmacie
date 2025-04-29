@@ -1,109 +1,79 @@
 <?php
-    session_start();
-    require_once("../db/db.php");
-    
-    if(isset($_GET["id"])) {
-        $id = $_GET["id"];
+session_start();
+require_once("../db/db.php");
 
-        $req = $pdo->prepare("SELECT * FROM users WHERE id_user=$id");
-        $req->execute();
-        $user = $req->fetch();
-    }
+// Vérifier si l'ID est fourni
+if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+    header("Location: index.php");
+    exit;
+}
 
-    // Controle de saisie
-    if (isset($_POST["btnSubmit"])) {
-        // Vérifier si les champs sont non vides.
-        if(!empty($_POST["name"]) AND !empty($_POST["firstname"]) AND !empty($_POST["email"]) AND 
-            !empty($_POST["phone"])) {
-                // Déclaration des variables en retirant les espaces grace à trim et en retirant les possibles injections html grace à htmlspecialchars.
-                $name = trim(htmlspecialchars($_POST["name"]));
-                $firstname = trim(htmlspecialchars($_POST["firstname"]));
-                $email = trim(htmlspecialchars($_POST["email"]));
-                $phone = trim(htmlspecialchars($_POST["phone"]));
-                if (empty($_POST["password"])) {
-                    $password = "password";
-                }else {
-                    $password = trim(htmlspecialchars($_POST["password"]));
-                }
-                $avatarName = $_FILES["avatar"]["name"];
-                if (isset($_POST["role"])) {
-                    $role = trim(htmlspecialchars($_POST["role"]));
-                }else {
-                    $role = 1;
-                }
-                
-                //Récupérer la date actuelle.
-                $date = new DateTime();
-                $date_modif = $date->format('Y-m-d H:i:s');
-                
-                //Gestion de l'image
-                $valid_extension = array('png', 'jpeg', 'jpg'); //Liste des extensions valides.
-                $avatar_path = pathinfo($avatarName, PATHINFO_EXTENSION); //récupérer l'extension du fichier.
-                $file_tmp = $_FILES["avatar"]["tmp_name"]; //Emplacement temporaire du fichier.
-                $file_name = $name."_".$avatarName; // nom du fichier stocké dans le dossier images.
-            
-                // Vérifier la saisie de l'utilisateur
-            if (strlen($name) >= 3 AND strlen($name) <= 255){ // votre nom doit contenir entre 3 à 255 caractères.
-                if (filter_var($email, FILTER_VALIDATE_EMAIL)) { //Vérifie le format de l'email, s'il est conforme.
-                    if (strlen($email) <= 255) { // L'e-mail doit etre moins de 255 caractères de long.
-                        //Si pas de correspondance, on poursuit notre insertion en base de données.
-                        if (strlen($password) >=8 AND strlen($password) <= 255) {//Vérifie la taille du mot de passe. Il doit supérieur ou égal à 8 caractères et inférieur ou égal à 255 caractères.
-                            $password_crypted = sha1($password); // crypter le mot de passe.
-                            if (strlen($phone) >= 9 AND strlen($phone) <= 15) { //Vérifie la taille du numéro de téléphone, s'il est compris entre 9 et 15 caractères.
-                                // Vérifie si le role appartient soit à l'utilisateur simple (1), ou à l'administrateur (2).
-                                if ($role == 1 OR $role == 2) { 
-                                    //Si le champ de l'image est vide, on change la valeur du nom du fichier par le nom de l'image par défaut.
-                                    if(empty($avatarName)) {
-                                        // insérer les données en base de données.
-                                        $req = $pdo->prepare("UPDATE users SET name=?, firstname=?, email=?, 
-                                        password=?, phone=?, role=?, updated_at=? WHERE id_user=$id");
-                                        $req->execute(array($name, $firstname, $email, $password_crypted, $phone, 
-                                            $role, $date_modif));
-                                        // Redirection vers la page Liste des utilisateurs.
-                                        header("Location:index.php");
-                                    }
-                                    //Vérifiez l'extension du fichier.
-                                    elseif (in_array(strtolower($avatar_path), $valid_extension)) {
-                                        //Définir le chemin de stockage du fichier.
-                                        $destinations = '../assets/images/'.$file_name; //chemin d'accès ou sera stocké le fichier.
-                                        // Déplacer le fichier dans le dossier images.
-                                        if (move_uploaded_file($file_tmp, $destinations)) {
-                                            // insérer les données en base de données.
-                                            $req = $pdo->prepare("UPDATE users SET name=?, firstname=?, email=?, 
-                                                password=?, phone=?, avatar=?, role=?, updated_at=? WHERE id_user=$id");
-                                            $req->execute(array($name, $firstname, $email, $password_crypted, $phone, 
-                                                $file_name, $role, $date_modif));
-                                            // Redirection vers la page Liste des utilisateurs.
-                                            header("Location:index.php");
-                                        } else {
-                                            $error = "une erreur s'est produite !";
-                                        }
-                                    }else {
-                                        $error = "veuillez entrer une image correcte ('.png', '.jpeg', '.jpg').";
-                                    }
-                                }else {
-                                    $error = "Oups...";
-                                }
-                            }else {
-                                $error = "Veuillez entrer un numéro de téléphone d'au moins 9 caractères.";
+$id_medicament = (int)$_GET['id'];
+
+// Récupérer les données du médicament
+$query = $pdo->prepare("SELECT * FROM medicaments WHERE id_medicament = ?");
+$query->execute([$id_medicament]);
+$medicament = $query->fetch();
+
+if (!$medicament) {
+    header("Location: index.php");
+    exit;
+}
+
+// Traitement du formulaire
+if (isset($_POST["btnSubmit"])) {
+    if (
+        !empty($_POST["nom"]) && !empty($_POST["dosage"]) && !empty($_POST["quantite"]) &&
+        !empty($_POST["seuil_minimum"]) && !empty($_POST["date_expiration"])
+    ) {
+
+        // Récupération et nettoyage des données
+        $nom = trim(htmlspecialchars($_POST["nom"]));
+        $dosage = trim(htmlspecialchars($_POST["dosage"]));
+        $quantite = (int)$_POST["quantite"];
+        $seuil_minimum = (int)$_POST["seuil_minimum"];
+        $date_expiration = trim(htmlspecialchars($_POST["date_expiration"]));
+
+        // Validation des champs
+        if (strlen($nom) >= 3 && strlen($nom) <= 255) {
+            if (strlen($dosage) >= 1 && strlen($dosage) <= 100) {
+                if ($quantite >= 0) {
+                    if ($seuil_minimum >= 0) {
+                        $today = date('Y-m-d');
+                        if ($date_expiration >= $today) {
+                            // Vérifier l'unicité (nom + dosage, sauf pour le médicament actuel)
+                            $query = $pdo->prepare("SELECT id_medicament FROM medicaments WHERE nom = ? AND dosage = ? AND id_medicament != ?");
+                            $query->execute([$nom, $dosage, $id_medicament]);
+                            if ($query->rowCount() == 0) {
+                                // Mise à jour dans la base de données
+                                $req = $pdo->prepare("UPDATE medicaments SET nom = ?, dosage = ?, quantite = ?, seuil_minimum = ?, date_expiration = ? WHERE id_medicament = ?");
+                                $req->execute([$nom, $dosage, $quantite, $seuil_minimum, $date_expiration, $id_medicament]);
+
+                                // Redirection vers la liste
+                                header("Location: index.php");
+                                exit;
+                            } else {
+                                $error = "Ce médicament (nom et dosage) existe déjà.";
                             }
-                        }else {
-                            $error = "veuillez entrer un mot de passe compris entre 8 et 255 caractères.";
+                        } else {
+                            $error = "La date d'expiration doit être aujourd'hui ou dans le futur.";
                         }
-                    }else {
-                        $error = "L'e-mail doit etre moins de 255 caractères de long.";
+                    } else {
+                        $error = "Le seuil minimum doit être supérieur ou égal à 0.";
                     }
-                }else {
-                    $error = "Veuillez entrer un e-mail correct !";
+                } else {
+                    $error = "La quantité doit être supérieure ou égale à 0.";
                 }
-            }else {
-                $error = "Veuillez entrer un Nom qui contient entre 3 et 255 caractères.";
+            } else {
+                $error = "Le dosage doit contenir entre 1 et 100 caractères.";
             }
         } else {
-            $error = "veuillez remplir tous les champs !";
+            $error = "Le nom doit contenir entre 3 et 255 caractères.";
         }
+    } else {
+        $error = "Veuillez remplir tous les champs obligatoires.";
     }
-    
+}
 ?>
 
 <!DOCTYPE html>
@@ -112,8 +82,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modification d'utilisateurs</title>
-    <link rel="stylesheet" href="../assets/css/bootstrap.min.css">
+    <title>Modifier un Médicament</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .container {
+            margin-top: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .required::after {
+            content: " *";
+            color: red;
+        }
+    </style>
 </head>
 
 <body>
@@ -121,49 +106,46 @@
     <?php include("../includes/navbar.php"); ?>
     <!-- Navbar -->
 
-    <div class="container mt-5">
-        <h1 class="text text-center col-md-6">Editer un utilisateur</h1>
-        <?php if(isset($error)){ echo '<font color=red>'.$error; } ?>
-        <form action="" method="post" enctype="multipart/form-data">
-            <div class="form-group col-md-6 py-2">
-                <label for="name" class="form-label">Nom <sup style="color: red;">*</sup></label>
-                <input type="text" name="name" class="form-control" id="name"
-                    value="<?php if (isset($_POST['name'])) { echo $_POST['name'];} else{ echo $user->name;}?>">
+    <div class="container">
+        <h1 class="text-center my-4">Modifier un Médicament</h1>
+        <?php if (isset($error)) : ?>
+            <div class="alert alert-danger" role="alert">
+                <?= htmlspecialchars($error) ?>
             </div>
-            <div class="form-group col-md-6 py-2">
-                <label for="firstname" class="form-label">Prénom <sup style="color: red;">*</sup></label>
-                <input type="text" name="firstname" class="form-control" id="firstname"
-                    value="<?php if (isset($_POST['firstname'])) { echo $_POST['firstname'];} else{ echo $user->firstname;}?>">
+        <?php endif; ?>
+        <form action="" method="post" class="col-md-6 mx-auto">
+            <div class="form-group">
+                <label for="nom" class="form-label required">Nom</label>
+                <input type="text" name="nom" class="form-control" id="nom" required
+                    value="<?= htmlspecialchars($medicament->nom) ?>">
             </div>
-            <div class="form-group col-md-6 mt-2">
-                <label for="email" class="form-label">Email <sup style="color: red;">*</sup></label>
-                <input type="email" name="email" class="form-control" id="email"
-                    value="<?php if (isset($_POST['email'])) { echo $_POST['email'];} else{ echo $user->email;}?>">
+            <div class="form-group">
+                <label for="dosage" class="form-label required">Dosage</label>
+                <input type="text" name="dosage" class="form-control" id="dosage" required
+                    value="<?= htmlspecialchars($medicament->dosage) ?>">
             </div>
-            <div class="form-group col-md-6 mt-2">
-                <label for="phone" class="form-label">Téléphone <sup style="color: red;">*</sup></label>
-                <input type="tel" name="phone" class="form-control" id="phone"
-                    value="<?php if (isset($_POST['phone'])) { echo $_POST['phone'];} else{ echo $user->phone;}?>">
+            <div class="form-group">
+                <label for="quantite" class="form-label required">Quantité</label>
+                <input type="number" name="quantite" class="form-control" id="quantite" min="0" required
+                    value="<?= htmlspecialchars($medicament->quantite) ?>">
             </div>
-            <div class="form-group col-md-6 mt-2">
-                <label for="password" class="form-label">Mot de passe</label>
-                <input type="password" name="password" class="form-control" id="password">
+            <div class="form-group">
+                <label for="seuil_minimum" class="form-label required">Seuil Minimum</label>
+                <input type="number" name="seuil_minimum" class="form-control" id="seuil_minimum" min="0" required
+                    value="<?= htmlspecialchars($medicament->seuil_minimum) ?>">
             </div>
-            <div class="form-group col-md-6 mt-2">
-                <label for="avatar">Photo de profil </label>
-                <input type="file" name="avatar" id="avatar" class="form-control">
+            <div class="form-group">
+                <label for="date_expiration" class="form-label required">Date d'Expiration</label>
+                <input type="date" name="date_expiration" class="form-control" id="date_expiration" required
+                    value="<?= htmlspecialchars($medicament->date_expiration) ?>">
             </div>
-            <div class=" form-group col-md-6 mt-2">
-                <label for="role">Role <sup style="color: red;">*</sup></label>
-                <select name="role" id="role" class="form-control">
-                    <option value="1" <?php if($user->role == 1){echo "selected";} ?>>Utilisateur</option>
-                    <option value="2" <?php if($user->role == 2){echo "selected";} ?>>Administrateur</option>
-                </select>
-            </div>
-
-            <div class="my-3">
-                <button class="btn btn-primary" type="submit" name="btnSubmit">Soumettre</button>
-                <a class="btn btn-danger" href="index.php">Retour</a>
+            <div class="d-flex gap-2 my-4">
+                <button class="btn btn-primary" type="submit" name="btnSubmit">
+                    <i class="bi bi-save"></i> Enregistrer
+                </button>
+                <a class="btn btn-danger" href="index.php">
+                    <i class="bi bi-arrow-left"></i> Retour
+                </a>
             </div>
         </form>
     </div>
@@ -171,8 +153,8 @@
     <!-- Footer -->
     <?php include("../includes/footer.php"); ?>
     <!-- Footer -->
-</body>
 
-<script src="../assets/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
 
 </html>

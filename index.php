@@ -3,24 +3,24 @@ session_start();
 include("db/db.php");
 //Vérifier si le formulaire a été soumi
 if (isset($_POST["btnSubmit"])) {
-    if (!empty($_POST["email"]) AND !empty($_POST["password"])) {
+    if (!empty($_POST["email"]) and !empty($_POST["password"])) {
         // Récupération des champs du formulaire
         $email = trim(htmlspecialchars($_POST["email"]));
         $password = trim(htmlspecialchars($_POST["password"]));
 
         $req = $pdo->prepare("SELECT * FROM users WHERE email = ? AND password = ?");
-      	$req->execute(array($email, sha1($password)));
+        $req->execute(array($email, sha1($password)));
 
         if ($req->rowCount() == 1) {
             $user = $req->fetch(); // Récupérer les données de l'utilisateur.
             $_SESSION['id'] = $user->id_user;
             $_SESSION['name'] = $user->name;
             $_SESSION['role'] = $user->role;
-            header("Location: users/index.php?name=".$_SESSION['name']);
-        }else{
+            header("Location: medicaments/index.php?name=" . $_SESSION['name']);
+        } else {
             $error = "Nom d'utilisateur ou mot de passe incorrect";
         }
-    }else {
+    } else {
         $error = "Veuillez remplir tous les champs !";
     }
 }
