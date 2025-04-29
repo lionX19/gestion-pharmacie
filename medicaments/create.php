@@ -1,6 +1,6 @@
 <?php
-    session_start();
-    include("traitement.php");
+session_start();
+include("traitement.php");
 ?>
 
 <!DOCTYPE html>
@@ -9,8 +9,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ajout d'utilisateurs</title>
-    <link rel="stylesheet" href="../assets/css/bootstrap.min.css">
+    <title>Ajouter un Médicament</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .container {
+            margin-top: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .required::after {
+            content: " *";
+            color: red;
+        }
+    </style>
 </head>
 
 <body>
@@ -18,49 +33,46 @@
     <?php include("../includes/navbar.php"); ?>
     <!-- Navbar -->
 
-    <div class="container mt-5">
-        <h1 class="text text-center col-md-6">Ajouter un utilisateur</h1>
-        <?php if(isset($error)){ echo '<font color=red>'.$error; } ?>
-        <form action="" method="post" enctype="multipart/form-data">
-            <div class="form-group col-md-6 py-2">
-                <label for="name" class="form-label">Nom <sup style="color: red;">*</sup></label>
-                <input type="text" name="name" class="form-control" id="name"
-                    value="<?php if (isset($_POST['name'])) { echo $_POST['name'];}?>">
+    <div class="container">
+        <h1 class="text-center my-4">Ajouter un Médicament</h1>
+        <?php if (isset($error)) : ?>
+            <div class="alert alert-danger" role="alert">
+                <?= htmlspecialchars($error) ?>
             </div>
-            <div class="form-group col-md-6 py-2">
-                <label for="firstname" class="form-label">Prénom <sup style="color: red;">*</sup></label>
-                <input type="text" name="firstname" class="form-control" id="firstname"
-                    value="<?php if (isset($_POST['firstname'])) { echo $_POST['firstname'];}?>">
+        <?php endif; ?>
+        <form action="" method="post" class="col-md-6 mx-auto">
+            <div class="form-group">
+                <label for="nom" class="form-label required">Nom</label>
+                <input type="text" name="nom" class="form-control" id="nom" required
+                    value="<?php if (isset($_POST['nom'])) echo htmlspecialchars($_POST['nom']); ?>">
             </div>
-            <div class="form-group col-md-6 mt-2">
-                <label for="email" class="form-label">Email <sup style="color: red;">*</sup></label>
-                <input type="email" name="email" class="form-control" id="email"
-                    value="<?php if (isset($_POST['email'])) { echo $_POST['email'];}?>">
+            <div class="form-group">
+                <label for="dosage" class="form-label required">Dosage</label>
+                <input type="text" name="dosage" class="form-control" id="dosage" required
+                    value="<?php if (isset($_POST['dosage'])) echo htmlspecialchars($_POST['dosage']); ?>">
             </div>
-            <div class="form-group col-md-6 mt-2">
-                <label for="phone" class="form-label">Téléphone <sup style="color: red;">*</sup></label>
-                <input type="tel" name="phone" class="form-control" id="phone"
-                    value="<?php if (isset($_POST['phone'])) { echo $_POST['phone'];}?>">
+            <div class="form-group">
+                <label for="quantite" class="form-label required">Quantité</label>
+                <input type="number" name="quantite" class="form-control" id="quantite" min="0" required
+                    value="<?php if (isset($_POST['quantite'])) echo htmlspecialchars($_POST['quantite']); ?>">
             </div>
-            <div class="form-group col-md-6 mt-2">
-                <label for="password" class="form-label">Mot de passe</label>
-                <input type="password" name="password" class="form-control" id="password">
+            <div class="form-group">
+                <label for="seuil_minimum" class="form-label required">Seuil Minimum</label>
+                <input type="number" name="seuil_minimum" class="form-control" id="seuil_minimum" min="0" required
+                    value="<?php if (isset($_POST['seuil_minimum'])) echo htmlspecialchars($_POST['seuil_minimum']); ?>">
             </div>
-            <div class="form-group col-md-6 mt-2">
-                <label for="avatar">Photo de profil </label>
-                <input type="file" name="avatar" id="avatar" class="form-control">
+            <div class="form-group">
+                <label for="date_expiration" class="form-label required">Date d'Expiration</label>
+                <input type="date" name="date_expiration" class="form-control" id="date_expiration" required
+                    value="<?php if (isset($_POST['date_expiration'])) echo htmlspecialchars($_POST['date_expiration']); ?>">
             </div>
-            <div class=" form-group col-md-6 mt-2">
-                <label for="role">Role <sup style="color: red;">*</sup></label>
-                <select name="role" id="role" class="form-control">
-                    <option value="1" selected>Utilisateur</option>
-                    <option value="2">Administrateur</option>
-                </select>
-            </div>
-
-            <div class="my-3">
-                <button class="btn btn-primary" type="submit" name="btnSubmit">Soumettre</button>
-                <a class="btn btn-danger" href="index.php">Retour</a>
+            <div class="d-flex gap-2 my-4">
+                <button class="btn btn-primary" type="submit" name="btnSubmit">
+                    <i class="bi bi-save"></i> Enregistrer
+                </button>
+                <a class="btn btn-danger" href="index.php">
+                    <i class="bi bi-arrow-left"></i> Retour
+                </a>
             </div>
         </form>
     </div>
@@ -68,8 +80,8 @@
     <!-- Footer -->
     <?php include("../includes/footer.php"); ?>
     <!-- Footer -->
-</body>
 
-<script src="../assets/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
 
 </html>

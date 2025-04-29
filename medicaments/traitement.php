@@ -2,97 +2,58 @@
 require_once('../db/db.php');
 
 if (isset($_POST["btnSubmit"])) {
-    if (!empty($_POST["name"]) AND !empty($_POST["firstname"]) AND !empty($_POST["email"]) AND !empty($_POST["phone"]) AND
-        !empty($_POST["role"])) {
-        
-        // Récupération des champs du formulaire
-        $name = trim(htmlspecialchars($_POST["name"]));
-        $firstname = trim(htmlspecialchars($_POST["firstname"]));
-        $email = trim(htmlspecialchars($_POST["email"]));
-        $phone = trim(htmlspecialchars($_POST["phone"]));
-        if(empty($_POST["password"])) {
-            $password = "password";
-        }else {
-            $password = trim(htmlspecialchars($_POST["password"]));
-        }
-        $role = trim(htmlspecialchars($_POST["role"]));
-        $avatarName = $_FILES["avatar"]["name"];
+    // Vérification des champs obligatoires
+    if (
+        !empty($_POST["nom"]) && !empty($_POST["dosage"]) && !empty($_POST["quantite"]) &&
+        !empty($_POST["seuil_minimum"]) && !empty($_POST["date_expiration"])
+    ) {
 
-        //Gestion de l'image
-        $valid_extension = array('png', 'jpeg', 'jpg'); //Liste des extensions valides.
-        $avatar_path = pathinfo($avatarName, PATHINFO_EXTENSION); //récupérer l'extension du fichier.
-        $file_tmp = $_FILES["avatar"]["tmp_name"]; //Emplacement temporaire du fichier.
-        $file_name = $name."_".$avatarName; // nom du fichier stocké dans le dossier images.
-        die(var_dump($avatarName));
+        // Récupération et nettoyage des données
+        $nom = trim(htmlspecialchars($_POST["nom"]));
+        $dosage = trim(htmlspecialchars($_POST["dosage"]));
+        $quantite = (int)$_POST["quantite"];
+        $seuil_minimum = (int)$_POST["seuil_minimum"];
+        $date_expiration = trim(htmlspecialchars($_POST["date_expiration"]));
+
         // Validation des champs
-        if (strlen($name) >= 3 AND strlen($name) <= 255) {
-            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                if (strlen($email) <= 255) {
-                    // Comparaison de l'email de l'utilisateur à ceux déjà présent en base de données.
-                    $query = $pdo->prepare("SELECT email FROM users WHERE email=?");
-                    $query->execute(array($email));
-                    
-                    //Si pas de correspondance, on poursuit notre insertion en base de données.
-                    if ($query->rowCount() != 1) {
-                        if (strlen($phone) >= 9 AND strlen($phone) <= 15) {
-                            if (strlen($password) >= 8 AND strlen($password) <= 255) {
-                                $password_crypted = sha1($password);
-                                if ($role == 1 OR $role == 2) { // Vérifie si le role appartient soit à l'utilisateur simple (1), ou à l'administrateur (2).
-                                    //Si le champ de l'image est vide, on change la valeur du nom du fichier par le nom de l'image par défaut.
-                                    if(empty($avatarName)) {
-                                        $file_name = "default.png"; //Nom de l'image par défaut.
-                                        // insérer les données en base de données.
-                                        $req = $pdo->prepare("INSERT INTO users SET name=?, firstname=?, email=?, 
-                                        password=?, phone=?, avatar=?, role=?");
-                                        $req->execute(array($name, $firstname, $email, $password_crypted, $phone, 
-                                            $file_name, $role));
-                                        // Redirection vers la page Liste des utilisateurs.
-                                        header("Location:index.php");
-                                    }
-                                    //Vérifiez l'extension du fichier.
-                                    elseif (in_array(strtolower($avatar_path), $valid_extension)) {
-                                        //Définir le chemin de stockage du fichier.
-                                        $destinations = '../assets/images/'.$file_name; //chemin d'accès ou sera stocké le fichier.
-                                        // Déplacer le fichier dans le dossier images.
-                                        if (move_uploaded_file($file_tmp, $destinations)) {
-                                            // insérer les données en base de données.
-                                            $req = $pdo->prepare("INSERT INTO users SET name=?, firstname=?, email=?, 
-                                                password=?, phone=?, avatar=?, role=?");
-                                            $req->execute(array($name, $firstname, $email, $password_crypted, $phone, 
-                                                $file_name, $role));
-                                            // Redirection vers la page Liste des utilisateurs.
-                                            header("Location:index.php");
-                                        } else {
-                                            $error = "une erreur s'est produite !";
-                                        }
-                                    }else {
-                                        $error = "veuillez entrer une image correcte ('.png', '.jpeg', '.jpg').";
-                                    }
-                                }else {
-                                    $error = "Oups...";
-                                }
-                            }else {
-                                $error = "veuillez entrer un mot de passe compris entre 8 et 255 caractères.";
+        if (strlen($nom) >= 3 && strlen($nom) <= 255) {
+            if (strlen($dosage) >= 1 && strlen($dosage) <= 100) {
+                if ($quantite >= 0) {
+                    if ($seuil_minimum >= 0) {
+                        // Validation de la date d'expiration (doit être future ou aujourd'hui)
+                        $today = date('Y-m-d');
+                        if ($date_expiration >= $today) {
+                            // Vérification si le médicament existe déjà (nom + dosage unique)
+                            $query = $pdo->prepare("SELECT id_medicament FROM medicaments WHERE nom = ? AND dosage = ?");
+                            $query->execute([$nom, $dosage]);
+                            if ($query->rowCount() == 0) {
+                                // Insertion dans la base de données
+                                $req = $pdo->prepare("INSERT INTO medicaments (nom, dosage, quantite, seuil_minimum, date_expiration, created_at) 
+                                                      VALUES (?, ?, ?, ?, ?, NOW())");
+                                $req->execute([$nom, $dosage, $quantite, $seuil_minimum, $date_expiration]);
+
+                                // Redirection vers la liste des médicaments
+                                header("Location: index.php");
+                                exit;
+                            } else {
+                                $error = "Ce médicament (nom et dosage) existe déjà.";
                             }
-                        }else {
-                            $error = "veuillez entrer un numéro de téléphone compris entre 9 et 15 caractères.";
+                        } else {
+                            $error = "La date d'expiration doit être aujourd'hui ou dans le futur.";
                         }
-                    }else {
-                        $error = "Cet email existe déjà en base de données !";
+                    } else {
+                        $error = "Le seuil minimum doit être supérieur ou égal à 0.";
                     }
                 } else {
-                    $error = "L'e-mail doit comporter moins de 255 caractères de long.";
+                    $error = "La quantité doit être supérieure ou égale à 0.";
                 }
             } else {
-                $error = "Veuillez entrer un e-mail correct.";
+                $error = "Le dosage doit contenir entre 1 et 100 caractères.";
             }
         } else {
-            $error = "Veuillez entrer un Nom qui contient entre 3 et 255 caractères.";
+            $error = "Le nom doit contenir entre 3 et 255 caractères.";
         }
-        
     } else {
-        $error = "Veuillez remplir tous les champs !";
+        $error = "Veuillez remplir tous les champs obligatoires.";
     }
 }
-
-?>

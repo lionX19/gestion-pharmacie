@@ -13,7 +13,7 @@
                 </li> -->
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="dropdown03" data-bs-toggle="dropdown"
-                        aria-expanded="false">Gestion des utilisateurs</a>
+                        aria-expanded="false">Gestion phrarma</a>
                     <ul class="dropdown-menu" aria-labelledby="dropdown03">
                         <li><a class="dropdown-item text-secondary" href="../users/index.php">Liste des utilisateurs</a>
                         </li>
@@ -24,7 +24,9 @@
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="dropdown03" data-bs-toggle="dropdown"
                         aria-expanded="false">Bienvenue
-                        <?php if (isset($_SESSION["name"])) { echo $_SESSION["name"]; } ?>
+                        <?php if (isset($_SESSION["name"])) {
+                            echo $_SESSION["name"];
+                        } ?>
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="dropdown03">
                         <li><a class="dropdown-item text-success" href="#">Accueil</a></li>
